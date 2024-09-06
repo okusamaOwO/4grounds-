@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal CLI</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #1e1e1e;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #terminal {
+      flex-grow: 1;
+      padding: 10px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      background: #000;
+    }
+
+    #input {
+      background-color: #2b2b2b;
+      color: #ffffff;
+      border: none;
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+    }
+
+    #button-panel {
+      display: flex;
+      flex-direction: column;
+      margin-left: 10px;
+    }
+
+    .btn {
+      margin: 5px;
+      padding: 10px;
+      background-color: #0078d4;
+      color: white;
+      cursor: pointer;
+      border: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal">
+    <div id="output"></div>
+  </div>
+  <input type="text" id="input" placeholder="Type your command here..." autofocus />
+  
+  <div id="button-panel">
+    <button class="btn" onclick="runExampleCommand('echo Hello!')">Run Echo</button>
+  </div>
+
+  <script>
+    const input = document.getElementById('input');
+    const output = document.getElementById('output');
+
+    // Simulate command execution
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const command = input.value;
+        output.innerHTML += `<div>> ${command}</div>`;
+        input.value = '';
+
+        // Send command to the Rust backend
+        window.__TAURI__.invoke('execute_command', { cmd: command })
+          .then(result => {
+            output.innerHTML += `<div>${result}</div>`;
+            output.scrollTop = output.scrollHeight;
+          })
+          .catch((err) => {
+            console.error("Error executing command:", err);
+          });
+      }
+    });
+
+    // Example button to run a predefined command
+    function runExampleCommand(command) {
+      output.innerHTML += `<div>> ${command}</div>`;
+      window.__TAURI__.invoke('execute_command', { cmd: command })
+        .then(result => {
+          output.innerHTML += `<div>${result}</div>`;
+          output.scrollTop = output.scrollHeight;
+        })
+        .catch((err) => {
+          console.error("Error executing command:", err);
+        });
+    }
+  </script>
+</body>
+</html>
