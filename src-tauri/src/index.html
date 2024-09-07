@@ -1,99 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Terminal CLI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLI Interface</title>
   <style>
     body {
       font-family: monospace;
-      background-color: #1e1e1e;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      margin: 0;
-    }
-
-    #terminal {
-      flex-grow: 1;
-      padding: 10px;
-      overflow-y: auto;
-      border: 1px solid #333;
-      background: #000;
-    }
-
-    #input {
-      background-color: #2b2b2b;
-      color: #ffffff;
-      border: none;
-      padding: 10px;
-      font-size: 16px;
-      width: 100%;
-    }
-
-    #button-panel {
-      display: flex;
-      flex-direction: column;
-      margin-left: 10px;
-    }
-
-    .btn {
-      margin: 5px;
-      padding: 10px;
-      background-color: #0078d4;
+      background-color: black;
       color: white;
-      cursor: pointer;
+      padding: 10px;
+    }
+    .terminal {
+      width: 80%;
+      margin: 0 auto;
+      border: 1px solid #333;
+      padding: 20px;
+      height: 500px;
+      overflow-y: auto;
+      background-color: black;
+      color: white;
+    }
+    #input {
+      width: 80%;
+      background-color: black;
+      color: white;
       border: none;
-      text-align: center;
+      outline: none;
+    }
+    #current-dir {
+      color: lightgreen;
     }
   </style>
 </head>
 <body>
-  <div id="terminal">
-    <div id="output"></div>
+  <div class="terminal" id="terminal">
+    <div id="current-dir">C:\> </div> <!-- Hiển thị thư mục hiện tại -->
   </div>
-  <input type="text" id="input" placeholder="Type your command here..." autofocus />
+  <input type="text" id="input" autofocus placeholder="Type command here...">
   
-  <div id="button-panel">
-    <button class="btn" onclick="runExampleCommand('echo Hello!')">Run Echo</button>
-  </div>
-
   <script>
+    const terminal = document.getElementById('terminal');
     const input = document.getElementById('input');
-    const output = document.getElementById('output');
+    const currentDirDisplay = document.getElementById('current-dir');
 
-    // Simulate command execution
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+    let currentDir = "C:\\";
+
+    // Function to update the directory display
+    function updateDirectoryDisplay() {
+      currentDirDisplay.innerText = `${currentDir}> `;
+    }
+
+    updateDirectoryDisplay();
+
+    input.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
         const command = input.value;
-        output.innerHTML += `<div>> ${command}</div>`;
-        input.value = '';
+        if (command.trim() === '') return;
 
-        // Send command to the Rust backend
-        window.__TAURI__.invoke('execute_command', { cmd: command })
-          .then(result => {
-            output.innerHTML += `<div>${result}</div>`;
-            output.scrollTop = output.scrollHeight;
-          })
-          .catch((err) => {
-            console.error("Error executing command:", err);
-          });
+        // Display the command in the terminal
+        terminal.innerHTML += `<div><span style="color:green;">${currentDir}> ${command}</span></div>`;
+        
+        // Send the command to the backend
+        fetch('http://127.0.0.1:3030/run_command', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ input: command }),
+        })
+        .then(response => response.json())
+        .then(result => {
+          // Handle success or error output
+          if (result.error) {
+            terminal.innerHTML += `<div style="color:red;">${result.error}</div>`;
+          } else {
+            // Check if the command was 'cd' and update currentDir
+            currentDir = result.output.trim(); // Update the directory from the backend
+            updateDirectoryDisplay(); // Update the directory in the UI
+            terminal.innerHTML += `<div>${result.output}</div>`;
+          }
+          terminal.scrollTop = terminal.scrollHeight; // Auto-scroll to the bottom
+        })
+        .catch(err => {
+          terminal.innerHTML += `<div style="color:red;">Error: ${err}</div>`;
+        });
+
+        // Clear the input
+        input.value = '';
       }
     });
-
-    // Example button to run a predefined command
-    function runExampleCommand(command) {
-      output.innerHTML += `<div>> ${command}</div>`;
-      window.__TAURI__.invoke('execute_command', { cmd: command })
-        .then(result => {
-          output.innerHTML += `<div>${result}</div>`;
-          output.scrollTop = output.scrollHeight;
-        })
-        .catch((err) => {
-          console.error("Error executing command:", err);
-        });
-    }
   </script>
 </body>
 </html>
